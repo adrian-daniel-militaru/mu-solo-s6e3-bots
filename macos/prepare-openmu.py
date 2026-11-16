@@ -1,0 +1,63 @@
+"""Apply the local deployment changes to the pinned OpenMU checkout."""
+
+from pathlib import Path
+import sys
+
+
+def replace(path, old, new):
+    file = source / path
+    contents = file.read_text(encoding="utf-8")
+    if contents.count(old) != 1:
+        raise SystemExit(f"OpenMU changed in {path}; review the packaging changes.")
+    file.write_text(contents.replace(old, new), encoding="utf-8")
+
+
+source = Path(sys.argv[1])
+replace(
+    "src/Network/Listener.cs",
+    "this._clientListener = new TcpListener(IPAddress.Any, this._port);",
+    "this._clientListener = new TcpListener(IPAddress.Loopback, this._port);",
+)
+replace(
+    "src/Startup/Program.cs",
+    "var exitToken = exitCts.Token;",
+    """var exitToken = exitCts.Token;
+        using var term = System.Runtime.InteropServices.PosixSignalRegistration.Create(
+            System.Runtime.InteropServices.PosixSignal.SIGTERM, signal =>
+            {
+                signal.Cancel = true;
+                exitCts.Cancel();
+            });""",
+)
+replace(
+    "src/Startup/Program.cs",
+    "initialization.CreateInitialDataAsync(3, true)",
+    "initialization.CreateInitialDataAsync(1, true)",
+)
+replace(
+    "src/Persistence/Initialization/VersionSeasonSix/TestAccounts/TestAccountsInitialization.cs",
+    """        for (int i = 0; i < 10; i++)""",
+    """        // An empty personal account for the local app.
+        if (Environment.GetEnvironmentVariable("MU_SOLO_LOCAL") == "1")
+        {
+            var account = this.Context.CreateNew<MUnique.OpenMU.DataModel.Entities.Account>();
+            account.LoginName = "solo";
+            account.PasswordHash = BCrypt.Net.BCrypt.HashPassword("soloplay");
+            account.Vault = this.Context.CreateNew<MUnique.OpenMU.DataModel.Entities.ItemStorage>();
+            return;
+        }
+
+        for (int i = 0; i < 10; i++)""",
+)
+replace(
+    "src/GameLogic/Bots/BotFeaturePlugIn.cs",
+    "return new BotConfiguration();",
+    """return new BotConfiguration
+        {
+            Enabled = true,
+            NumberOfAccounts = 12,
+            MaxCharactersPerAccount = 1,
+            PresenceRotation = false,
+            StartAsFreshCharacters = true,
+        };""",
+)

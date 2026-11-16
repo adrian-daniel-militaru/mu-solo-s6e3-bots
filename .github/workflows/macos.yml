@@ -1,0 +1,38 @@
+name: Build MU Solo for macOS
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'macos/**'
+      - '.github/workflows/macos.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  macos-arm64:
+    runs-on: macos-26
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Install PostgreSQL build tools
+        run: |
+          brew install bison flex
+          printf '%s\n' "$(brew --prefix bison)/bin" "$(brew --prefix flex)/bin" >> "$GITHUB_PATH"
+      - name: Build both apps and check the server lifecycle
+        env:
+          MU_SOLO_SMOKE_TEST: '1'
+        run: bash macos/build.sh
+      # The client archive contains upstream game data. Keep build downloads private.
+      - uses: actions/upload-artifact@v4
+        if: github.event.repository.private
+        with:
+          name: MU-Solo-macOS-arm64
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7
