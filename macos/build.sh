@@ -9,6 +9,8 @@ root="$(cd "$(dirname "$0")/.." && pwd -P)"
 source "$root/macos/upstream.env"
 work="$(mktemp -d "${TMPDIR:-/tmp}/mu-solo-build.XXXXXX")"
 trap 'rm -rf -- "$work"' EXIT
+# Razor needs a consistent project root and source path when deriving namespaces.
+work="$(cd "$work" && pwd -P)"
 mkdir -p "$root/dist"
 server="$work/MU Server.app"
 contents="$server/Contents"
@@ -48,9 +50,12 @@ git init -q "$work/OpenMU"
 git -C "$work/OpenMU" fetch --depth 1 https://github.com/MUnique/OpenMU.git "$OPENMU_REF"
 git -C "$work/OpenMU" checkout -q --detach FETCH_HEAD
 python3 "$root/macos/prepare-openmu.py" "$work/OpenMU"
-dotnet publish "$work/OpenMU/src/Startup/MUnique.OpenMU.Startup.csproj" \
-    --configuration Release --runtime osx-arm64 --self-contained true \
-    --output "$resources/OpenMU"
+(
+    cd "$work/OpenMU"
+    dotnet publish src/Startup/MUnique.OpenMU.Startup.csproj \
+        --configuration Release --runtime osx-arm64 --self-contained true \
+        --output "$resources/OpenMU"
+)
 cp "$work/OpenMU/LICENSE" "$resources/OpenMU/LICENSE"
 test -f "$resources/OpenMU/ConnectionSettings.xml"
 sed -i '' 's/Port=5432;/Port=55436;/g' "$resources/OpenMU/ConnectionSettings.xml"
