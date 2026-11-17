@@ -26,7 +26,7 @@ cleanup() {
 trap cleanup EXIT
 
 start() {
-    bash "$resources/start-server.sh" &
+    MU_SOLO_BOT_COUNT="${1:-}" bash "$resources/start-server.sh" &
     launcher_pid=$!
     for ((attempt = 0; attempt < 240; attempt++)); do
         kill -0 "$launcher_pid" 2>/dev/null || return 1
@@ -45,27 +45,49 @@ query() {
         -p 55436 -U postgres -d openmu -Atc "$1"
 }
 
+wait_for_bots() {
+    local count="$1"
+    for ((attempt = 0; attempt < 90; attempt++)); do
+        kill -0 "$launcher_pid" 2>/dev/null || return 1
+        if /usr/bin/grep -Fq "Bot feature started $count of $count bots." "$state/logs/server.log"; then
+            return
+        fi
+        sleep 1
+    done
+    echo "OpenMU did not start $count bots." >&2
+    return 1
+}
+
+bot_ids() {
+    query 'select "Id" from data."Account" where "IsBot" order by "LoginName" limit 12'
+}
+
 start
 account_id="$(query "select \"Id\" from data.\"Account\" where \"LoginName\" = 'solo'")"
 test -n "$account_id"
-bot_count=0
-for ((attempt = 0; attempt < 90; attempt++)); do
-    bot_count="$(query 'select count(*) from data."Account" where "IsBot"')"
-    if ((bot_count == 12)); then break; fi
-    sleep 1
-done
-if ((bot_count != 12)); then
-    echo "Expected 12 bot accounts, found $bot_count." >&2
-    exit 1
-fi
+wait_for_bots 12
+test "$(query 'select count(*) from data."Account" where "IsBot"')" -eq 12
+original_bots="$(bot_ids)"
 stop
 if /usr/bin/nc -z -G 1 127.0.0.1 55436 2>/dev/null; then
     echo "The bundled database did not shut down." >&2
     exit 1
 fi
 
-start
+start 3
+wait_for_bots 3
 test "$account_id" = "$(query "select \"Id\" from data.\"Account\" where \"LoginName\" = 'solo'")"
-test "$(query 'select count(*) from data."Account" where "IsBot"')" -eq "$bot_count"
+test "$original_bots" = "$(bot_ids)"
 stop
-echo "First launch, 12 bot accounts, shutdown and persistent storage passed."
+
+start 0
+wait_for_bots 0
+test "$original_bots" = "$(bot_ids)"
+stop
+
+start 15
+wait_for_bots 15
+test "$original_bots" = "$(bot_ids)"
+test "$(query 'select count(*) from data."Account" where "IsBot"')" -eq 15
+stop
+echo "Default, lower, zero and higher bot counts passed with the original accounts intact."

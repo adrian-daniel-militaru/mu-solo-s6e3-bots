@@ -12,7 +12,9 @@ Log in with **solo / soloplay** and create a character in the game. Use **Stop S
 
 If macOS blocks the first launch of this test build, see [Apple's instructions for opening an app that hasn't been notarized](https://support.apple.com/en-us/102445#openanyway).
 
-The server starts with one realm at upstream rates and twelve bots starting from level 1. Characters, bot progress, and world configuration are stored in `~/Library/Application Support/MU Solo/database`, outside the app. Server and database logs are in the adjacent `logs` folder.
+The server starts with one realm at upstream rates and 12 bots starting from level 1. To change the population, enter 0–600 in **Bots** and click **Apply and Restart** in MU Server. This disconnects the client, so reconnect once the server is ready. The app remembers your choice. Bots above a reduced count stay offline and keep their progress. Increasing the count brings existing bots back and creates any additional bots at level 1.
+
+Characters, bot progress, and world configuration are stored in `~/Library/Application Support/MU Solo/database`, outside the app. Server and database logs are in the adjacent `logs` folder.
 
 ## Build and verify
 

@@ -61,3 +61,39 @@ replace(
             StartAsFreshCharacters = true,
         };""",
 )
+replace(
+    "src/GameLogic/Bots/BotFeaturePlugIn.cs",
+    "    private static readonly TimeSpan StartupDelay = TimeSpan.FromSeconds(15);",
+    """    private static readonly TimeSpan StartupDelay = TimeSpan.FromSeconds(15);
+
+    private static readonly int? LocalBotCount =
+        int.TryParse(System.Environment.GetEnvironmentVariable("MU_SOLO_BOT_COUNT"), out var count)
+        && count is >= 0 and <= 600 ? count : null;""",
+)
+replace(
+    "src/GameLogic/Bots/BotFeaturePlugIn.cs",
+    "    private readonly ConcurrentDictionary<IGameContext, ServerState> _states = new();",
+    """    private readonly ConcurrentDictionary<IGameContext, ServerState> _states = new();
+    private BotConfiguration? _configuration;""",
+)
+replace(
+    "src/GameLogic/Bots/BotFeaturePlugIn.cs",
+    "    public BotConfiguration? Configuration { get; set; }",
+    """    public BotConfiguration? Configuration
+    {
+        get => this._configuration;
+        set
+        {
+            if (value is not null && LocalBotCount is { } count)
+            {
+                // Apply the launcher setting to defaults and to already saved worlds.
+                value.Enabled = true;
+                value.NumberOfAccounts = count;
+                value.MaxCharactersPerAccount = 1;
+                value.PresenceRotation = false;
+            }
+
+            this._configuration = value;
+        }
+    }""",
+)
