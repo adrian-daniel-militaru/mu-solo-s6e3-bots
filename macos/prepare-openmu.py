@@ -47,6 +47,19 @@ replace(
 """.rstrip(),
 )
 replace(
+    "src/Web/AdminPanel/WebApplicationExtensions.cs",
+    'FileProvider = new PhysicalFileProvider(Path.Combine(Directory.GetCurrentDirectory(), "logs")),',
+    """FileProvider = new PhysicalFileProvider(
+                System.Environment.GetEnvironmentVariable("MU_SOLO_LOG_DIRECTORY")
+                ?? Path.Combine(Directory.GetCurrentDirectory(), "logs")),""",
+)
+replace(
+    "src/Web/AdminPanel/Pages/LogFiles.razor",
+    'var logsPath = Path.Combine(Directory.GetCurrentDirectory(), "logs");',
+    """var logsPath = System.Environment.GetEnvironmentVariable("MU_SOLO_LOG_DIRECTORY")
+            ?? Path.Combine(Directory.GetCurrentDirectory(), "logs");""",
+)
+replace(
     "src/Persistence/Initialization/VersionSeasonSix/TestAccounts/TestAccountsInitialization.cs",
     """        for (int i = 0; i < 10; i++)""",
     """        // An empty personal account for the local app.

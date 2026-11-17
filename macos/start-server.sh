@@ -57,6 +57,7 @@ rm -f -- "$admin_url" "$admin_url.new"
 
 export MU_SOLO_LOCAL=1
 export MU_SOLO_ADMIN_URL_FILE="$admin_url"
+export MU_SOLO_LOG_DIRECTORY="$log"
 export DB_HOST=127.0.0.1
 export DB_ADMIN_USER=postgres
 export ASPNETCORE_URLS=http://127.0.0.1:0
