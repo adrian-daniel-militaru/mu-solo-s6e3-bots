@@ -62,6 +62,13 @@ sed -i '' 's/Port=5432;/Port=55436;/g' "$resources/OpenMU/ConnectionSettings.xml
 cp "$root/macos/start-server.sh" "$resources/"
 cp "$root/macos/ServerInfo.plist" "$contents/Info.plist"
 swiftc -swift-version 5 -O "$root/macos/ServerApp.swift" -o "$contents/MacOS/MUServer"
+codesign --force --sign - "$server"
+codesign --verify --deep --strict "$server"
+lipo -verify_arch arm64 "$contents/MacOS/MUServer"
+lipo -verify_arch arm64 "$resources/OpenMU/MUnique.OpenMU.Startup"
+if [[ "${MU_SOLO_SMOKE_TEST:-0}" == 1 ]]; then
+    bash "$root/macos/smoke-server.sh" "$resources"
+fi
 
 echo "Assembling MuMain $MUMAIN_VERSION with matching game data"
 runtime="MuMain-macos-native-arm64-release-editor-off-no-data.tar.gz"
@@ -75,27 +82,29 @@ tar -xzf "$work/$runtime" -C "$work"
 client="$work/MU Client.app"
 mv "$work/Main.app" "$client"
 client_bin="$client/Contents/MacOS"
-tar -xzf "$work/$data" -C "$client_bin"
+client_resources="$client/Contents/Resources"
+tar -xzf "$work/$data" -C "$client_resources"
 test -x "$client_bin/Main"
-test -d "$client_bin/Data"
-test -d "$client_bin/fonts"
-cat >"$client_bin/config.ini" <<'EOF'
+test -d "$client_resources/Data"
+test -d "$client_resources/fonts"
+cat >"$client_resources/config.ini" <<'EOF'
 [CONNECTION SETTINGS]
 ServerIP=127.0.0.1
 ServerPort=44406
 EOF
 
-# Sign the wrappers locally for ARM64. Developer ID distribution is separate.
-codesign --force --sign - "$server"
+# Signable bundles keep data in Resources. MuMain expects it beside Main.
+for resource in MuMainIcon.png config.ini.template release-version.txt shaders; do
+    mv "$client_bin/$resource" "$client_resources/"
+done
+for resource in Data fonts config.ini MuMainIcon.png config.ini.template release-version.txt shaders; do
+    ln -s "../Resources/$resource" "$client_bin/$resource"
+done
+
+codesign --force --sign - "$client_bin/MUnique.Client.Library.dylib"
 codesign --force --sign - "$client"
-codesign --verify "$server"
-codesign --verify "$client"
-lipo -verify_arch arm64 "$contents/MacOS/MUServer"
-lipo -verify_arch arm64 "$resources/OpenMU/MUnique.OpenMU.Startup"
+codesign --verify --deep --strict "$client"
 lipo -verify_arch arm64 "$client_bin/Main"
-if [[ "${MU_SOLO_SMOKE_TEST:-0}" == 1 ]]; then
-    bash "$root/macos/smoke-server.sh" "$resources"
-fi
 
 ditto -c -k --sequesterRsrc --keepParent "$server" "$root/dist/MU-Server-macOS-arm64.zip"
 ditto -c -k --sequesterRsrc --keepParent "$client" "$root/dist/MU-Client-macOS-arm64.zip"
