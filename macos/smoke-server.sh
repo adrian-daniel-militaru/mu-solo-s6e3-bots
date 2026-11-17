@@ -51,10 +51,13 @@ test -n "$account_id"
 bot_count=0
 for ((attempt = 0; attempt < 90; attempt++)); do
     bot_count="$(query 'select count(*) from data."Account" where "IsBot"')"
-    if ((bot_count > 0)); then break; fi
+    if ((bot_count == 12)); then break; fi
     sleep 1
 done
-test "$bot_count" -gt 0
+if ((bot_count != 12)); then
+    echo "Expected 12 bot accounts, found $bot_count." >&2
+    exit 1
+fi
 stop
 if /usr/bin/nc -z -G 1 127.0.0.1 55436 2>/dev/null; then
     echo "The bundled database did not shut down." >&2
@@ -65,4 +68,4 @@ start
 test "$account_id" = "$(query "select \"Id\" from data.\"Account\" where \"LoginName\" = 'solo'")"
 test "$(query 'select count(*) from data."Account" where "IsBot"')" -eq "$bot_count"
 stop
-echo "First launch, bot creation, shutdown and persistent storage passed."
+echo "First launch, 12 bot accounts, shutdown and persistent storage passed."

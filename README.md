@@ -6,15 +6,19 @@ The first target is Apple Silicon on macOS 26. The long-term goal is to package 
 
 ## macOS
 
-After extracting the two build archives, open **MU Server.app**. When it says your world is ready, open **MU Client.app** and log in with **solo / soloplay**. Create a character in the game. Use **Stop Server and Quit** in the server window to save and shut down the local world. The intended setup requires no Docker, separate database installation, or internet connection during play.
+Download **MU-Solo-macOS-arm64** from a successful [macOS build](https://github.com/adrian-daniel-militaru/mu-solo-s6e3-bots/actions/workflows/macos.yml) while signed in to GitHub. Extract the two app archives. Open **MU Server.app**, wait for your world to be ready, then open **MU Client.app**. The first client launch downloads the pinned MuMain runtime and game data from MuMain's own releases. It keeps them on your Mac for offline play.
+
+Log in with **solo / soloplay** and create a character in the game. Use **Stop Server and Quit** in the server window to save and shut down the local world. Both apps run without Docker or a separate database installation.
+
+If macOS blocks the first launch of this test build, see [Apple's instructions for opening an app that hasn't been notarized](https://support.apple.com/en-us/102445#openanyway).
 
 The server starts with one realm at upstream rates and twelve bots starting from level 1. Characters, bot progress, and world configuration are stored in `~/Library/Application Support/MU Solo/database`, outside the app. Server and database logs are in the adjacent `logs` folder.
 
 ## Build and verify
 
-The **Build MU Solo for macOS** workflow builds the pair on an Apple Silicon runner and checks server startup, bot creation, shutdown, and database persistence across a restart. It uploads the app archives only from a private repository, since the client archive includes upstream game data. A first successful build and an in-game login test on a Mac are still required. The build uses ad hoc signatures and has no Developer ID signature or notarization.
+The **Build MU Solo for macOS** workflow builds the pair on an Apple Silicon runner and checks server startup, bot creation, shutdown, and database persistence across a restart. The build uses ad hoc signatures and has no Developer ID signature or notarization. In-game compatibility needs a separate test on a Mac.
 
-To build from an Apple Silicon Mac with Xcode command line tools, .NET 10, Python 3, Bison, and Flex, run `MU_SOLO_SMOKE_TEST=1 bash macos/build.sh`. Build downloads require internet access. For personal builds, the workflow assembles the client from the upstream runtime and its matching game data archive. The repository contains only the packaging code.
+To build from an Apple Silicon Mac with Xcode command line tools, .NET 10, Python 3, Bison, and Flex, run `MU_SOLO_SMOKE_TEST=1 bash macos/build.sh`. This downloads and bundles the upstream runtime and game data during the build, so the resulting client can open offline on its first launch. Set `MU_SOLO_CLIENT_DOWNLOAD_ON_FIRST_OPEN=1` to build the smaller launcher used by GitHub Actions.
 
 To update the pair, change the pins in `macos/upstream.env` and rebuild. The server patches check their source anchors and fail the build when they need updating. Before using an updated build with an existing world, stop the server, copy the `MU Solo` data directory, and verify the update on a copy. A fresh-world CI run does not verify migrations from an existing save.
 

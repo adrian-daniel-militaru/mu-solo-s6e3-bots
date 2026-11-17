@@ -70,41 +70,24 @@ if [[ "${MU_SOLO_SMOKE_TEST:-0}" == 1 ]]; then
     bash "$root/macos/smoke-server.sh" "$resources"
 fi
 
-echo "Assembling MuMain $MUMAIN_VERSION with matching game data"
-runtime="MuMain-macos-native-arm64-release-editor-off-no-data.tar.gz"
-data="MuMain-data-$MUMAIN_DATA_ID.tar.gz"
-releases=https://github.com/sven-n/MuMain/releases/download
-download "$releases/$MUMAIN_VERSION/$runtime" "$work/$runtime"
-verify "$MUMAIN_RUNTIME_SHA" "$work/$runtime"
-download "$releases/data-$MUMAIN_DATA_ID/$data" "$work/$data"
-verify "$MUMAIN_DATA_SHA" "$work/$data"
-tar -xzf "$work/$runtime" -C "$work"
 client="$work/MU Client.app"
-mv "$work/Main.app" "$client"
-client_bin="$client/Contents/MacOS"
-client_resources="$client/Contents/Resources"
-tar -xzf "$work/$data" -C "$client_resources"
-test -x "$client_bin/Main"
-test -d "$client_resources/Data"
-test -d "$client_resources/fonts"
-cat >"$client_resources/config.ini" <<'EOF'
-[CONNECTION SETTINGS]
-ServerIP=127.0.0.1
-ServerPort=44406
-EOF
-
-# Signable bundles keep data in Resources. MuMain expects it beside Main.
-for resource in MuMainIcon.png config.ini.template release-version.txt shaders; do
-    mv "$client_bin/$resource" "$client_resources/"
-done
-for resource in Data fonts config.ini MuMainIcon.png config.ini.template release-version.txt shaders; do
-    ln -s "../Resources/$resource" "$client_bin/$resource"
-done
-
-codesign --force --sign - "$client_bin/MUnique.Client.Library.dylib"
-codesign --force --sign - "$client"
-codesign --verify --deep --strict "$client"
-lipo -verify_arch arm64 "$client_bin/Main"
+if [[ "${MU_SOLO_CLIENT_DOWNLOAD_ON_FIRST_OPEN:-0}" == 1 ]]; then
+    game="$work/MU Online.app"
+    bash "$root/macos/install-client.sh" "$game"
+    lipo -verify_arch arm64 "$game/Contents/MacOS/Main"
+    mkdir -p "$client/Contents/MacOS" "$client/Contents/Resources"
+    cp "$root/macos/"{install-client.sh,upstream.env} "$client/Contents/Resources/"
+    cp "$root/macos/ClientInfo.plist" "$client/Contents/Info.plist"
+    plutil -insert MUSoloClientRelease -string "$MUMAIN_VERSION-$MUMAIN_DATA_ID" \
+        "$client/Contents/Info.plist"
+    swiftc -swift-version 5 -O "$root/macos/ClientApp.swift" -o "$client/Contents/MacOS/MUClient"
+    codesign --force --sign - "$client"
+    codesign --verify --deep --strict "$client"
+    lipo -verify_arch arm64 "$client/Contents/MacOS/MUClient"
+else
+    bash "$root/macos/install-client.sh" "$client"
+    lipo -verify_arch arm64 "$client/Contents/MacOS/Main"
+fi
 
 ditto -c -k --sequesterRsrc --keepParent "$server" "$root/dist/MU-Server-macOS-arm64.zip"
 ditto -c -k --sequesterRsrc --keepParent "$client" "$root/dist/MU-Client-macOS-arm64.zip"

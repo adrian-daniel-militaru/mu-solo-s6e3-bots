@@ -27,12 +27,13 @@ jobs:
       - name: Build both apps and check the server lifecycle
         env:
           MU_SOLO_SMOKE_TEST: '1'
+          MU_SOLO_CLIENT_DOWNLOAD_ON_FIRST_OPEN: '1'
         run: bash macos/build.sh
-      # The client archive contains upstream game data. Keep build downloads private.
       - uses: actions/upload-artifact@v4
-        if: github.event.repository.private
         with:
           name: MU-Solo-macOS-arm64
-          path: dist/
+          path: |
+            dist/MU-Server-macOS-arm64.zip
+            dist/MU-Client-macOS-arm64.zip
+            dist/SHA256SUMS.txt
           if-no-files-found: error
-          retention-days: 7
