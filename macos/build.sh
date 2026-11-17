@@ -63,12 +63,12 @@ cp "$root/macos/start-server.sh" "$resources/"
 cp "$root/macos/ServerInfo.plist" "$contents/Info.plist"
 swiftc -swift-version 5 -O "$root/macos/ServerApp.swift" -o "$contents/MacOS/MUServer"
 codesign --force --sign - "$server"
-codesign --verify --deep --strict "$server"
 lipo "$contents/MacOS/MUServer" -verify_arch arm64
 lipo "$resources/OpenMU/MUnique.OpenMU.Startup" -verify_arch arm64
 if [[ "${MU_SOLO_SMOKE_TEST:-0}" == 1 ]]; then
     bash "$root/macos/smoke-server.sh" "$resources"
 fi
+codesign --verify --deep --strict "$server"
 
 client="$work/MU Client.app"
 if [[ "${MU_SOLO_CLIENT_DOWNLOAD_ON_FIRST_OPEN:-0}" == 1 ]]; then

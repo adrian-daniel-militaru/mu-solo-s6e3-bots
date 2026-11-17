@@ -16,6 +16,16 @@ The server starts with one realm at upstream rates and 12 bots starting from lev
 
 Characters, bot progress, and world configuration are stored in `~/Library/Application Support/MU Solo/database`, outside the app. Server and database logs are in the adjacent `logs` folder.
 
+## Control panel
+
+Click **Open Control Panel** in MU Server. Sign in as **admin** and use **Copy Admin Password** to get the password generated for your Mac. The panel opens in your browser and listens only on your Mac.
+
+- **Configuration → General** has normal and master XP rates and level caps. [Game configuration](https://openmu-docs.munique.net/admin-panel/game-configuration/)
+- **Configuration → Plugins → Reset Feature** has the reset level, Zen and item costs, and point rewards. Activate the plugin to enable character resets. [Plugins](https://openmu-docs.munique.net/admin-panel/plugins/)
+- **Configuration** also includes drop tables, merchants, monsters, and the map editor. [OpenMU admin panel](https://openmu-docs.munique.net/admin-panel/overview/)
+
+Save your changes and use **Servers → Reload configuration and restart all game servers** for settings that are loaded at startup. To use OpenMU's full bot settings, first select **Manage bots in Control Panel** in MU Server and click **Apply and Restart**. Then edit **Bots** on the Plugins page.
+
 ## Build and verify
 
 The **Build MU Solo for macOS** workflow builds the pair on an Apple Silicon runner and checks server startup, bot creation, shutdown, and database persistence across a restart. The build uses ad hoc signatures and has no Developer ID signature or notarization. In-game compatibility needs a separate test on a Mac.

@@ -45,6 +45,19 @@ query() {
         -p 55436 -U postgres -d openmu -Atc "$1"
 }
 
+check_control_panel() {
+    local panel_url login auth_status
+    panel_url="$(cat "$state/admin-url")"
+    [[ "$panel_url" =~ ^http://127\.0\.0\.1:[1-9][0-9]*$ ]]
+    login="$(/usr/bin/curl --noproxy '*' -fsS --max-time 15 "$panel_url/login")"
+    [[ "$login" == *'id="login-name"'* && "$login" == *'id="login-password"'* ]]
+    /usr/bin/curl --noproxy '*' -fsS --max-time 15 \
+        "$panel_url/_content/MUnique.OpenMU.Web.AdminPanel/js/auth.js" -o /dev/null
+    auth_status="$(/usr/bin/curl --noproxy '*' -sS --max-time 15 -o /dev/null -w '%{http_code}' \
+        "$panel_url/auth/proxy?role=Administrator")"
+    test "$auth_status" = 401
+}
+
 wait_for_bots() {
     local count="$1"
     for ((attempt = 0; attempt < 90; attempt++)); do
@@ -63,18 +76,24 @@ bot_ids() {
 }
 
 start
+check_control_panel
+admin_password="$(cat "$state/admin-password")"
+test "${#admin_password}" -eq 48
 account_id="$(query "select \"Id\" from data.\"Account\" where \"LoginName\" = 'solo'")"
 test -n "$account_id"
 wait_for_bots 12
 test "$(query 'select count(*) from data."Account" where "IsBot"')" -eq 12
 original_bots="$(bot_ids)"
 stop
+test ! -e "$state/admin-url"
 if /usr/bin/nc -z -G 1 127.0.0.1 55436 2>/dev/null; then
     echo "The bundled database did not shut down." >&2
     exit 1
 fi
 
 start 3
+check_control_panel
+test "$admin_password" = "$(cat "$state/admin-password")"
 wait_for_bots 3
 test "$account_id" = "$(query "select \"Id\" from data.\"Account\" where \"LoginName\" = 'solo'")"
 test "$original_bots" = "$(bot_ids)"
@@ -91,3 +110,4 @@ test "$original_bots" = "$(bot_ids)"
 test "$(query 'select count(*) from data."Account" where "IsBot"')" -eq 15
 stop
 echo "Default, lower, zero and higher bot counts passed with the original accounts intact."
+echo "The protected local OpenMU control panel loaded and retained its password across a restart."

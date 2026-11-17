@@ -35,6 +35,18 @@ replace(
     "initialization.CreateInitialDataAsync(1, true)",
 )
 replace(
+    "src/Startup/Program.cs",
+    '        this._logger.Information("Admin Panel bound to urls: {urls}", string.Join("; ", host.Urls));',
+    """        this._logger.Information("Admin Panel bound to urls: {urls}", string.Join("; ", host.Urls));
+        if (addAdminPanel && Environment.GetEnvironmentVariable("MU_SOLO_ADMIN_URL_FILE") is { Length: > 0 } adminUrlFile)
+        {
+            var stagingFile = adminUrlFile + ".new";
+            await File.WriteAllTextAsync(stagingFile, host.Urls.Single()).ConfigureAwait(false);
+            File.Move(stagingFile, adminUrlFile, overwrite: true);
+        }
+""".rstrip(),
+)
+replace(
     "src/Persistence/Initialization/VersionSeasonSix/TestAccounts/TestAccountsInitialization.cs",
     """        for (int i = 0; i < 10; i++)""",
     """        // An empty personal account for the local app.
