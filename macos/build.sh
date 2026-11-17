@@ -64,8 +64,8 @@ cp "$root/macos/ServerInfo.plist" "$contents/Info.plist"
 swiftc -swift-version 5 -O "$root/macos/ServerApp.swift" -o "$contents/MacOS/MUServer"
 codesign --force --sign - "$server"
 codesign --verify --deep --strict "$server"
-lipo -verify_arch arm64 "$contents/MacOS/MUServer"
-lipo -verify_arch arm64 "$resources/OpenMU/MUnique.OpenMU.Startup"
+lipo "$contents/MacOS/MUServer" -verify_arch arm64
+lipo "$resources/OpenMU/MUnique.OpenMU.Startup" -verify_arch arm64
 if [[ "${MU_SOLO_SMOKE_TEST:-0}" == 1 ]]; then
     bash "$root/macos/smoke-server.sh" "$resources"
 fi
@@ -74,7 +74,7 @@ client="$work/MU Client.app"
 if [[ "${MU_SOLO_CLIENT_DOWNLOAD_ON_FIRST_OPEN:-0}" == 1 ]]; then
     game="$work/MU Online.app"
     bash "$root/macos/install-client.sh" "$game"
-    lipo -verify_arch arm64 "$game/Contents/MacOS/Main"
+    lipo "$game/Contents/MacOS/Main" -verify_arch arm64
     mkdir -p "$client/Contents/MacOS" "$client/Contents/Resources"
     cp "$root/macos/"{install-client.sh,upstream.env} "$client/Contents/Resources/"
     cp "$root/macos/ClientInfo.plist" "$client/Contents/Info.plist"
@@ -83,10 +83,10 @@ if [[ "${MU_SOLO_CLIENT_DOWNLOAD_ON_FIRST_OPEN:-0}" == 1 ]]; then
     swiftc -swift-version 5 -O "$root/macos/ClientApp.swift" -o "$client/Contents/MacOS/MUClient"
     codesign --force --sign - "$client"
     codesign --verify --deep --strict "$client"
-    lipo -verify_arch arm64 "$client/Contents/MacOS/MUClient"
+    lipo "$client/Contents/MacOS/MUClient" -verify_arch arm64
 else
     bash "$root/macos/install-client.sh" "$client"
-    lipo -verify_arch arm64 "$client/Contents/MacOS/Main"
+    lipo "$client/Contents/MacOS/Main" -verify_arch arm64
 fi
 
 ditto -c -k --sequesterRsrc --keepParent "$server" "$root/dist/MU-Server-macOS-arm64.zip"
